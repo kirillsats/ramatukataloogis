@@ -25,7 +25,7 @@ def execute_query(connection, query: str, params=None):
         print("Query executed successfully")
     except Error as e:
         print(f"Error executing query: {e}")
-#читает файлы 
+#читает файлы
 def execute_read_query(connection, query: str, params=None):
     try:
         cursor = connection.cursor()
@@ -61,15 +61,15 @@ VALUES ('Stephen King', '1947-09-21'),
 ('Bernard Shaw', '1856-07-26'), 
 ("Eugene O'Neill", '1888-10-16'),
 #остались эти авторы и их книги
-('Alexander Sumarokov', '1717-11-25'),
-('Denis Fonvizin ', '1745-04-14'),
+('Evgeny Petrov', '1902-12-13'),
+('Denis Fonvizin', '1745-04-14'),
 ('Vasily Kapnist','1758-02-23'),
 ('Jojo Moyes', '1969-08-04'), 
 ('Colin McCullough','1937-06-01'),
 ('Cecilia Ahern','1981-09-30'),
 ('Vsevolod Garshin', '1855-02-14'),
-'Valentin Kataev', '1897-01-28'),
-'Anton Delvig', '1798-08-17')
+('Valentin Kataev', '1897-01-28'),
+('Anton Delvig', '1798-08-17')
 """
 
 
@@ -111,12 +111,25 @@ VALUES
   ('Fog', 6, 2),
   ('Anna Christie', 6, 2),
   ('Bread and butter', 6, 2),
-  ('', 7, 3),
-  ('', 7, 3),
-  ('', 7, 3),
-  ('', 8, 3),
-  ('', 8, 3),
-  ('', 8, 3),
+  ('Twelve chairs', 7, 3),
+  ('The Little Golden Calf', 7, 3),
+  ('One-story America', 7, 3),
+  ('Karion', 8, 3),
+  ('The Foreman', 8, 3),
+  ('Ignoramus', 8, 3),
+  ('A shadow', 9,3),
+  ('A sneak', 9,3),
+  ('Gasp', 9,3),
+  ('After you', 10,4)
+  ('One plus one', 10,4)
+  ('Dancing with horses', 10,4)
+  ('The Thorn Birds', 11,4),
+  ("Caesar's Women", 11,4),
+  ('Tim', 11,4),
+  ('P.S. I love you!', 12,4),
+  ('Flawed', 12,4),
+  ('Perfect', 12,4),
+  #осталось дописать 3 писателя
 """
 
 create_zanr = """
@@ -186,4 +199,3 @@ display_results(zanrid)
 conn.close()
 
 root.mainloop()
-
