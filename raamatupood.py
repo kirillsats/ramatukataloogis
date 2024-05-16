@@ -130,6 +130,12 @@ VALUES
   ('Flawed', 12,4),
   ('Perfect', 12,4),
   #осталось дописать 3 писателя
+  ('Four days', 13,5),
+  ('The incident', 13,5),
+  ('Coward', 13,5),
+  ('Horseshoe', 14,5),
+  ('A scene on a train', 14,5),
+  ('A dark personality', 14,5),
 """
 
 create_zanr = """
