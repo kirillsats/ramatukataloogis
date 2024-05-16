@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
 from sqlite3 import connect, Error
-from os import path, getcwd
 
 # Подключение к базе данных
 def create_connection(path: str):
@@ -13,7 +12,7 @@ def create_connection(path: str):
     except Error as e:
         print(e)
 
-#выполняет запрос к базе данных
+# Функция для выполнения запроса к базе данных
 def execute_query(connection, query: str, params=None):
     try:
         cursor = connection.cursor()
@@ -25,7 +24,8 @@ def execute_query(connection, query: str, params=None):
         print("Query executed successfully")
     except Error as e:
         print(f"Error executing query: {e}")
-#читает файлы
+
+# Функция для выполнения запроса на чтение данных из базы данных
 def execute_read_query(connection, query: str, params=None):
     try:
         cursor = connection.cursor()
@@ -38,6 +38,7 @@ def execute_read_query(connection, query: str, params=None):
     except Error as e:
         print(f"Error executing read query: {e}")
 
+# Определение SQL-запросов для создания таблиц и вставки данных
 create_table_zanrid = """
 CREATE TABLE IF NOT EXISTS zanrid(
     zanr_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -52,31 +53,6 @@ CREATE TABLE IF NOT EXISTS autorid(
     sunnikuupaev DATE NOT NULL
 )
 """
-insert_into_autorid = """
-INSERT INTO autorid(autor_nimi,sunnikuupaev) 
-VALUES ('Stephen King', '1947-09-21'),
-('Bram Stoker', '1847-11-08'),
-('Richard Bachman', '1936-06-23'),
-('William Shakespeare', '1564-04-04'),
-('Bernard Shaw', '1856-07-26'), 
-("Eugene O'Neill", '1888-10-16'),
-#остались эти авторы и их книги
-('Evgeny Petrov', '1902-12-13'),
-('Denis Fonvizin', '1745-04-14'),
-('Vasily Kapnist','1758-02-23'),
-('Jojo Moyes', '1969-08-04'), 
-('Colin McCullough','1937-06-01'),
-('Cecilia Ahern','1981-09-30'),
-('Vsevolod Garshin', '1855-02-14'),
-('Valentin Kataev', '1897-01-28'),
-('Anton Delvig', '1798-08-17')
-"""
-
-
-#SelectAutor = ['HorrorAutor', 'DramaAutor'] списком нельзя
-#HorrorAutor = ['Stephen King', 'Bram Stoker', 'Richard Bachman', 'Anne Rice', 'Shirley Jackson' ]
-
-
 
 create_table_raamatud = """
 CREATE TABLE IF NOT EXISTS raamatud(
@@ -88,6 +64,37 @@ CREATE TABLE IF NOT EXISTS raamatud(
     FOREIGN KEY (zanr_id) REFERENCES zanrid(zanr_id)
 )
 """
+
+insert_into_zanrid = """
+INSERT INTO zanrid(zanri_nimi)
+VALUES
+   ('Horror'),
+   ('Draama'),
+   ('Komedia'),
+   ('Romaan'),
+   ('Luuletus')
+"""
+
+insert_into_autorid = """
+INSERT INTO autorid(autor_nimi, sunnikuupaev) 
+VALUES 
+('Stephen King', '1947-09-21'),
+('Bram Stoker', '1847-11-08'),
+('Richard Bachman', '1936-06-23'),
+('William Shakespeare', '1564-04-04'),
+('Bernard Shaw', '1856-07-26'), 
+("Eugene O'Neill", '1888-10-16'),
+('Evgeny Petrov', '1902-12-13'),
+('Denis Fonvizin', '1745-04-14'),
+('Vasily Kapnist', '1758-02-23'),
+('Jojo Moyes', '1969-08-04'), 
+('Colin McCullough', '1937-06-01'),
+('Cecilia Ahern', '1981-09-30'),
+('Vsevolod Garshin', '1855-02-14'),
+('Valentin Kataev', '1897-01-28'),
+('Anton Delvig', '1798-08-17')
+"""
+
 insert_into_raamatud = """
 INSERT INTO raamatud(raamat_nimi, autor_id, zanr_id)
 VALUES
@@ -117,53 +124,44 @@ VALUES
   ('Karion', 8, 3),
   ('The Foreman', 8, 3),
   ('Ignoramus', 8, 3),
-  ('A shadow', 9,3),
-  ('A sneak', 9,3),
-  ('Gasp', 9,3),
-  ('After you', 10,4)
-  ('One plus one', 10,4)
-  ('Dancing with horses', 10,4)
-  ('The Thorn Birds', 11,4),
-  ("Caesar's Women", 11,4),
-  ('Tim', 11,4),
-  ('P.S. I love you!', 12,4),
-  ('Flawed', 12,4),
-  ('Perfect', 12,4),
-  #осталось дописать 3 писателя
-  ('Four days', 13,5),
-  ('The incident', 13,5),
-  ('Coward', 13,5),
-  ('Horseshoe', 14,5),
-  ('A scene on a train', 14,5),
-  ('A dark personality', 14,5),
+  ('A shadow', 9, 3),
+  ('A sneak', 9, 3),
+  ('Gasp', 9, 3),
+  ('After you', 10, 4),
+  ('One plus one', 10, 4),
+  ('Dancing with horses', 10, 4),
+  ('The Thorn Birds', 11, 4),
+  ("Caesar's Women", 11, 4),
+  ('Tim', 11, 4),
+  ('P.S. I love you!', 12, 4),
+  ('Flawed', 12, 4),
+  ('Perfect', 12, 4),
+  ('Four days', 13, 5),
+  ('The incident', 13, 5),
+  ('Coward', 13, 5),
+  ('Horseshoe', 14, 5),
+  ('A scene on a train', 14, 5),
+  ('A dark personality', 14, 5)
 """
 
-create_zanr = """
-INSERT INTO zanrid(zanri_nimi)
-VALUES
-   ('Horror'),
-  ('Draama'),
-  ('Komedia'),
-  ('Romaan'),
-  ('Luuletus')
-"""
-
-
+# Определение SQL-запроса для выбора всех уникальных жанров
 select_from_zanr = """
-SELECT DISTINCT * FROM zanrid
+SELECT DISTINCT zanri_nimi FROM zanrid
 """
 
+# Функция для отображения результатов
 def display_results(results):
     text.delete(1.0, tk.END)
     for result in results:
-        zanr_id = result[0]
-        zanri_nimi = result[1]
-        text.insert(tk.END, f"Zanr ID: {zanr_id}, Zanr: {zanri_nimi}\n")
+        text.insert(tk.END, f"{result[0]} by {result[1]}\n")
 
-def genre_selected(event):
+# Функция для обработки выбора жанра
+def genre_selected(event=None):
     selected_genre = genre_combobox.get()
     if selected_genre == "All Genres":
-        zanrid = execute_read_query(conn, select_from_zanr)
+        query = "SELECT raamat_nimi, autor_nimi FROM raamatud JOIN autorid ON raamatud.autor_id = autorid.autor_id"
+        results = execute_read_query(conn, query)
+        display_results(results)
     else:
         query = """
         SELECT raamatud.raamat_nimi, autorid.autor_nimi
@@ -172,36 +170,78 @@ def genre_selected(event):
         INNER JOIN zanrid ON raamatud.zanr_id = zanrid.zanr_id
         WHERE zanrid.zanri_nimi = ?
         """
-        zanrid = execute_read_query(conn, query, (selected_genre,))
-    display_results(zanrid)
+        results = execute_read_query(conn, query, (selected_genre,))
+        display_results(results)
 
+def get_id_from_name(connection, table_name, column_name, value):
+    query = f"SELECT {table_name}_id FROM {table_name} WHERE {column_name} = ?"
+    result = execute_read_query(connection, query, (value,))
+    if result:
+        return result[0][0]
+    else:
+        print(f"{value} not found in {table_name}")
+        return None
+
+def add_book():
+    book_name = book_name_entry.get()
+    author_name = author_name_entry.get()
+    genre_name = genre_name_entry.get()
+
+    # Получение ID автора, книги и жанра
+    author_id = get_id_from_name(conn, "autorid", "autor_nimi", author_name)
+    if author_id is None:
+        return
+    genre_id = get_id_from_name(conn, "zanrid", "zanri_nimi", genre_name)
+    if genre_id is None:
+        return
+
+    # Добавление книги в базу данных
+    insert_book_query = "INSERT INTO raamatud(raamat_nimi, autor_id, zanr_id) VALUES (?, ?, ?)"
+    execute_query(conn, insert_book_query, (book_name, author_id, genre_id))
+    print("Book added successfully")
+
+# Создание главного окна приложения
 root = tk.Tk()
 root.title("Database Query Results")
 
+# Создание вкладок
+tab_control = ttk.Notebook(root)
+tab1 = ttk.Frame(tab_control)
+tab2 = ttk.Frame(tab_control)
+tab3 = ttk.Frame(tab_control)
+tab_control.add(tab1, text="Просмотр книг")
+tab_control.add(tab2, text="Добавить книгу")
+tab_control.add(tab3, text="Удалить книгу")
+tab_control.pack(expand=1, fill="both")
+
+# Вкладка "Просмотр книг"
 genres = ["All Genres", "Draama", "Horror", "Komedia", "Romaan", "Luuletus"]
-genre_combobox = ttk.Combobox(root, values=genres)
+genre_combobox = ttk.Combobox(tab1, values=genres)
 genre_combobox.current(0)
 genre_combobox.bind("<<ComboboxSelected>>", genre_selected)
 genre_combobox.pack()
 
-text = tk.Text(root, wrap="word")
+text = tk.Text(tab1, wrap="word")
 text.pack(fill="both", expand=True)
 
-filename = path.abspath(__file__)
-dbdir = filename.rsplit("raamatupood.py")
-current_dir = getcwd()
-dbpath = path.join(current_dir, "data.db")
-conn = create_connection(dbpath)
+# Вкладка "Добавить книгу"
+tk.Label(tab2, text="Название книги").pack()
+book_name_entry = tk.Entry(tab2)
+book_name_entry.pack()
 
-execute_query(conn, create_table_zanrid)
-execute_query(conn, create_table_autorid)
-execute_query(conn, create_table_raamatud)
-execute_query(conn, create_zanr)
-execute_query(conn,insert_into_autorid)
+tk.Label(tab2, text="Имя автора").pack()
+author_name_entry = tk.Entry(tab2)
+author_name_entry.pack()
 
-zanrid = execute_read_query(conn, select_from_zanr)
-display_results(zanrid)
+tk.Label(tab2, text="Жанр").pack()
+genre_name_entry = tk.Entry(tab2)
+genre_name_entry.pack()
 
-conn.close()
+add_book_button = tk.Button(tab2, text="Добавить книгу", command=add_book)
+add_book_button.pack()
 
+# Подключение к базе данных
+conn = create_connection("books.db")
+
+# Запуск главного цикла обработки событий
 root.mainloop()
