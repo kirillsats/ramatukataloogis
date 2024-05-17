@@ -187,7 +187,7 @@ def add_book():
     author_name = author_name_entry.get()
     genre_name = genre_name_entry.get()
 
-    # Получение ID автора, книги и жанра
+    # Получение ID автора и жанра
     author_id = get_id_from_name(conn, "autorid", "autor_nimi", author_name)
     if author_id is None:
         return
@@ -199,6 +199,12 @@ def add_book():
     insert_book_query = "INSERT INTO raamatud(raamat_nimi, autor_id, zanr_id) VALUES (?, ?, ?)"
     execute_query(conn, insert_book_query, (book_name, author_id, genre_id))
     print("Book added successfully")
+
+def delete_book():
+    book_name = delete_book_entry.get()
+    delete_book_query = "DELETE FROM raamatud WHERE raamat_nimi = ?"
+    execute_query(conn, delete_book_query, (book_name,))
+    print("Book deleted successfully")
 
 # Создание главного окна приложения
 root = tk.Tk()
@@ -240,8 +246,26 @@ genre_name_entry.pack()
 add_book_button = tk.Button(tab2, text="Добавить книгу", command=add_book)
 add_book_button.pack()
 
+# Вкладка "Удалить книгу"
+tk.Label(tab3, text="Название книги").pack()
+delete_book_entry = tk.Entry(tab3)
+delete_book_entry.pack()
+
+delete_book_button = tk.Button(tab3, text="Удалить книгу", command=delete_book)
+delete_book_button.pack()
+
 # Подключение к базе данных
 conn = create_connection("books.db")
+
+# Создание таблиц и вставка данных (если требуется)
+execute_query(conn, create_table_zanrid)
+execute_query(conn, create_table_autorid)
+execute_query(conn, create_table_raamatud)
+
+# Вставка данных (если требуется)
+execute_query(conn, insert_into_zanrid)
+execute_query(conn, insert_into_autorid)
+execute_query(conn, insert_into_raamatud)
 
 # Запуск главного цикла обработки событий
 root.mainloop()
