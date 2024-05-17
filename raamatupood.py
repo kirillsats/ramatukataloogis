@@ -133,6 +133,24 @@ def delete_book():
     execute_query(conn, delete_book_query, (book_name,))
     print("Book deleted successfully")
 
+def add_genre():
+    new_genre = new_genre_entry.get()
+    if new_genre:
+        add_genre_query = "INSERT INTO zanrid(zanri_nimi) VALUES (?)"
+        execute_query(conn, add_genre_query, (new_genre,))
+        print("Genre added successfully")
+    else:
+        print("Please enter a genre name")
+
+def delete_genre():
+    selected_genre = delete_genre_combobox.get()
+    if selected_genre != "All Genres":
+        delete_genre_query = "DELETE FROM zanrid WHERE zanri_nimi = ?"
+        execute_query(conn, delete_genre_query, (selected_genre,))
+        print("Genre deleted successfully")
+    else:
+        print("Cannot delete 'All Genres'")
+
 # Создание главного окна приложения
 root = tk.Tk()
 root.title("Database Query Results")
@@ -180,6 +198,23 @@ delete_book_entry.pack()
 
 delete_book_button = tk.Button(tab3, text="Удалить книгу", command=delete_book)
 delete_book_button.pack()
+
+# Вкладка "Добавить жанр"
+tk.Label(tab2, text="Новый жанр").pack()
+new_genre_entry = tk.Entry(tab2)
+new_genre_entry.pack()
+
+add_genre_button = tk.Button(tab2, text="Добавить жанр", command=add_genre)
+add_genre_button.pack()
+
+# Вкладка "Удалить жанр"
+tk.Label(tab3, text="Удалить жанр").pack()
+delete_genre_combobox = ttk.Combobox(tab3, values=genres)
+delete_genre_combobox.current(0)
+delete_genre_combobox.pack()
+
+delete_genre_button = tk.Button(tab3, text="Удалить жанр", command=delete_genre)
+delete_genre_button.pack()
 
 # Подключение к базе данных
 conn = create_connection("books.db")
@@ -294,23 +329,6 @@ def display_results(results):
             text.insert(tk.END, f"{book_name} by {author_name} ({author_years})\n")
         else:
             text.insert(tk.END, f"{book_name} by {author_name}\n")
-
-def genre_selected(event=None):
-    selected_genre = genre_combobox.get()
-    if selected_genre == "All Genres":
-        query = "SELECT raamat_nimi, autor_nimi FROM raamatud JOIN autorid ON raamatud.autor_id = autorid.autor_id"
-        results = execute_read_query(conn, query)
-        display_results(results)
-    else:
-        query = """
-        SELECT raamatud.raamat_nimi, autorid.autor_nimi
-        FROM raamatud
-        INNER JOIN autorid ON raamatud.autor_id = autorid.autor_id
-        INNER JOIN zanrid ON raamatud.zanr_id = zanrid.zanr_id
-        WHERE zanrid.zanri_nimi = ?
-        """
-        results = execute_read_query(conn, query, (selected_genre,))
-        display_results(results)
 
 # Запуск главного цикла обработки событий
 root.mainloop()
