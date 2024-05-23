@@ -74,18 +74,30 @@ SELECT DISTINCT zanri_nimi FROM zanrid
 def display_results(results):
     text.delete(1.0, tk.END)
     for result in results:
-        text.insert(tk.END, f"{result[0]} by {result[1]}\n")
+        book_id = result[0]
+        book_name = result[1]
+        author_id = result[2]
+        author_name = result[3]
+        author_years = get_author_years(conn, author_id)
+        if author_years:
+            text.insert(tk.END, f"{book_id}: {book_name} by {author_name} ({author_years})\n")
+        else:
+            text.insert(tk.END, f"{book_id}: {book_name} by {author_name}\n")
 
 # Функция для обработки выбора жанра
 def genre_selected(event=None):
     selected_genre = genre_combobox.get()
     if selected_genre == "All Genres":
-        query = "SELECT raamat_nimi, autor_nimi FROM raamatud JOIN autorid ON raamatud.autor_id = autorid.autor_id"
+        query = """
+        SELECT raamatud.raamat_id, raamatud.raamat_nimi, autorid.autor_id, autorid.autor_nimi 
+        FROM raamatud 
+        JOIN autorid ON raamatud.autor_id = autorid.autor_id
+        """
         results = execute_read_query(conn, query)
         display_results(results)
     else:
         query = """
-        SELECT raamatud.raamat_nimi, autorid.autor_nimi
+        SELECT raamatud.raamat_id, raamatud.raamat_nimi, autorid.autor_id, autorid.autor_nimi
         FROM raamatud
         INNER JOIN autorid ON raamatud.autor_id = autorid.autor_id
         INNER JOIN zanrid ON raamatud.zanr_id = zanrid.zanr_id
@@ -103,11 +115,18 @@ def get_id_from_name(connection, table_name, column_name, value):
         print(f"{value} not found in {table_name}")
         return None
 
+def add_genre_to_database(genre_name):
+    if genre_name:
+        add_genre_query = "INSERT INTO zanrid(zanri_nimi) VALUES (?)"
+        execute_query(conn, add_genre_query, (genre_name,))
+        print("Genre added successfully")
+    else:
+        print("Please enter a genre name")
+
 def add_book():
     book_name = book_name_entry.get()
     author_name = author_name_entry.get()
     genre_name = genre_name_entry.get()
-
     # Проверка существования и добавление нового автора
     author_id = get_id_from_name(conn, "autorid", "autor_nimi", author_name)
     if author_id is None:
@@ -127,29 +146,32 @@ def add_book():
     execute_query(conn, insert_book_query, (book_name, author_id, genre_id))
     print("Book added successfully")
 
-def delete_book():
-    book_name = delete_book_entry.get()
-    delete_book_query = "DELETE FROM raamatud WHERE raamat_nimi = ?"
-    execute_query(conn, delete_book_query, (book_name,))
-    print("Book deleted successfully")
+    # После добавления книги обновим отображение списка книг
+    genre_selected()
+
 
 def add_genre():
     new_genre = new_genre_entry.get()
-    if new_genre:
-        add_genre_query = "INSERT INTO zanrid(zanri_nimi) VALUES (?)"
-        execute_query(conn, add_genre_query, (new_genre,))
-        print("Genre added successfully")
-    else:
-        print("Please enter a genre name")
+    add_genre_to_database(new_genre)
 
-def delete_genre():
-    selected_genre = delete_genre_combobox.get()
-    if selected_genre != "All Genres":
+
+def delete_book():
+    book_id = delete_book_id_entry.get()
+    delete_book_query = "DELETE FROM raamatud WHERE raamat_id = ?"
+    execute_query(conn, delete_book_query, (book_id,))
+    print("Book deleted successfully")
+    genre_selected()
+
+
+def delete_genre(genre_name):
+    if genre_name != "All Genres":
         delete_genre_query = "DELETE FROM zanrid WHERE zanri_nimi = ?"
-        execute_query(conn, delete_genre_query, (selected_genre,))
+        execute_query(conn, delete_genre_query, (genre_name,))
         print("Genre deleted successfully")
+        genre_selected()  # Обновляем отображение после удаления жанра
     else:
         print("Cannot delete 'All Genres'")
+
 
 # Создание главного окна приложения
 root = tk.Tk()
@@ -160,9 +182,11 @@ tab_control = ttk.Notebook(root)
 tab1 = ttk.Frame(tab_control)
 tab2 = ttk.Frame(tab_control)
 tab3 = ttk.Frame(tab_control)
+tab4 = ttk.Frame(tab_control)  # Новая вкладка для добавления жанра
 tab_control.add(tab1, text="Просмотр книг")
 tab_control.add(tab2, text="Добавить книгу")
 tab_control.add(tab3, text="Удалить книгу")
+tab_control.add(tab4, text="Добавить жанр")  # Добавляем вкладку для добавления жанра
 tab_control.pack(expand=1, fill="both")
 
 # Вкладка "Просмотр книг"
@@ -192,34 +216,36 @@ add_book_button = tk.Button(tab2, text="Добавить книгу", command=ad
 add_book_button.pack()
 
 # Вкладка "Удалить книгу"
-tk.Label(tab3, text="Название книги").pack()
-delete_book_entry = tk.Entry(tab3)
-delete_book_entry.pack()
+tk.Label(tab3, text="ID книги").pack()
+delete_book_id_entry = tk.Entry(tab3)
+delete_book_id_entry.pack()
 
 delete_book_button = tk.Button(tab3, text="Удалить книгу", command=delete_book)
 delete_book_button.pack()
 
 # Вкладка "Добавить жанр"
-tk.Label(tab2, text="Новый жанр").pack()
-new_genre_entry = tk.Entry(tab2)
+tk.Label(tab4, text="Новый жанр").pack()
+new_genre_entry = tk.Entry(tab4)
 new_genre_entry.pack()
 
-add_genre_button = tk.Button(tab2, text="Добавить жанр", command=add_genre)
+add_genre_button = tk.Button(tab4, text="Добавить жанр", command=add_genre)
 add_genre_button.pack()
 
 # Вкладка "Удалить жанр"
-tk.Label(tab3, text="Удалить жанр").pack()
-delete_genre_combobox = ttk.Combobox(tab3, values=genres)
+tab4 = ttk.Frame(tab_control)
+tab_control.add(tab4, text="Удалить жанр")
+
+tk.Label(tab4, text="Удалить жанр").pack()
+delete_genre_combobox = ttk.Combobox(tab4, values=genres)
 delete_genre_combobox.current(0)
 delete_genre_combobox.pack()
 
-delete_genre_button = tk.Button(tab3, text="Удалить жанр", command=delete_genre)
+delete_genre_button = tk.Button(tab4, text="Удалить жанр", command=delete_genre)
 delete_genre_button.pack()
 
 # Подключение к базе данных
 conn = create_connection("books.db")
-
-# Создание таблиц и вставка данных (если требуется)
+# Создание таблиц
 execute_query(conn, create_table_zanrid)
 execute_query(conn, create_table_autorid)
 execute_query(conn, create_table_raamatud)
@@ -290,7 +316,7 @@ if not execute_read_query(conn, "SELECT 1 FROM raamatud LIMIT 1"):
       ('The Foreman', 8, 3),
       ('Ignoramus', 8, 3),
       ('A shadow', 9, 3),
-      ('A sneak', 9, 3),
+      ('A sneak',9, 3),
       ('Gasp', 9, 3),
       ('After you', 10, 4),
       ('One plus one', 10, 4),
@@ -310,25 +336,27 @@ if not execute_read_query(conn, "SELECT 1 FROM raamatud LIMIT 1"):
     """
     execute_query(conn, insert_into_raamatud)
 
-def get_author_years(connection, author_name):
-    query = "SELECT sunnikuupaev FROM autorid WHERE autor_nimi = ?"
-    result = execute_read_query(connection, query, (author_name,))
+def get_author_years(connection, author_id):
+    query = "SELECT sunnikuupaev FROM autorid WHERE autor_id = ?"
+    result = execute_read_query(connection, query, (author_id,))
     if result:
         return result[0][0]
     else:
-        print(f"Birth date not found for author: {author_name}")
+        print(f"Birth date not found for author ID: {author_id}")
         return None
 
 def display_results(results):
     text.delete(1.0, tk.END)
     for result in results:
-        book_name = result[0]
-        author_name = result[1]
-        author_years = get_author_years(conn, author_name)
+        book_id = result[0]
+        book_name = result[1]
+        author_id = result[2]
+        author_name = result[3]
+        author_years = get_author_years(conn, author_id)
         if author_years:
-            text.insert(tk.END, f"{book_name} by {author_name} ({author_years})\n")
+            text.insert(tk.END, f"{book_id}: {book_name} by {author_name} ({author_years})\n")
         else:
-            text.insert(tk.END, f"{book_name} by {author_name}\n")
+            text.insert(tk.END, f"{book_id}: {book_name} by {author_name}\n")
 
 # Запуск главного цикла обработки событий
 root.mainloop()
