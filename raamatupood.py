@@ -123,6 +123,11 @@ def add_genre_to_database(genre_name):
     else:
         print("Please enter a genre name")
 
+def update_genre_list():
+    genres = ["All Genres"] + [genre[0] for genre in execute_read_query(conn, "SELECT zanri_nimi FROM zanrid")]
+    genre_combobox['values'] = genres
+    delete_genre_combobox['values'] = genres
+
 def add_book():
     book_name = book_name_entry.get()
     author_name = author_name_entry.get()
@@ -149,11 +154,10 @@ def add_book():
     # После добавления книги обновим отображение списка книг
     genre_selected()
 
-
 def add_genre():
     new_genre = new_genre_entry.get()
     add_genre_to_database(new_genre)
-
+    update_genre_list()  # Обновляем список жанров после добавления нового
 
 def delete_book():
     book_id = delete_book_id_entry.get()
@@ -162,16 +166,16 @@ def delete_book():
     print("Book deleted successfully")
     genre_selected()
 
-
-def delete_genre(genre_name):
+def delete_genre():
+    genre_name = delete_genre_combobox.get()
     if genre_name != "All Genres":
         delete_genre_query = "DELETE FROM zanrid WHERE zanri_nimi = ?"
         execute_query(conn, delete_genre_query, (genre_name,))
         print("Genre deleted successfully")
+        update_genre_list()  # Обновляем список жанров после удаления
         genre_selected()  # Обновляем отображение после удаления жанра
     else:
         print("Cannot delete 'All Genres'")
-
 
 # Создание главного окна приложения
 root = tk.Tk()
@@ -183,14 +187,16 @@ tab1 = ttk.Frame(tab_control)
 tab2 = ttk.Frame(tab_control)
 tab3 = ttk.Frame(tab_control)
 tab4 = ttk.Frame(tab_control)  # Новая вкладка для добавления жанра
+tab5 = ttk.Frame(tab_control)  # Новая вкладка для удаления жанра
 tab_control.add(tab1, text="Просмотр книг")
 tab_control.add(tab2, text="Добавить книгу")
 tab_control.add(tab3, text="Удалить книгу")
 tab_control.add(tab4, text="Добавить жанр")  # Добавляем вкладку для добавления жанра
+tab_control.add(tab5, text="Удалить жанр")  # Добавляем вкладку для удаления жанра
 tab_control.pack(expand=1, fill="both")
 
 # Вкладка "Просмотр книг"
-genres = ["All Genres", "Draama", "Horror", "Komedia", "Romaan", "Luuletus"]
+genres = ["All Genres"] + [genre[0] for genre in execute_read_query(create_connection("books.db"), "SELECT zanri_nimi FROM zanrid")]
 genre_combobox = ttk.Combobox(tab1, values=genres)
 genre_combobox.current(0)
 genre_combobox.bind("<<ComboboxSelected>>", genre_selected)
@@ -232,19 +238,17 @@ add_genre_button = tk.Button(tab4, text="Добавить жанр", command=add
 add_genre_button.pack()
 
 # Вкладка "Удалить жанр"
-tab4 = ttk.Frame(tab_control)
-tab_control.add(tab4, text="Удалить жанр")
-
-tk.Label(tab4, text="Удалить жанр").pack()
-delete_genre_combobox = ttk.Combobox(tab4, values=genres)
+tk.Label(tab5, text="Выберите жанр для удаления").pack()
+delete_genre_combobox = ttk.Combobox(tab5, values=genres)
 delete_genre_combobox.current(0)
 delete_genre_combobox.pack()
 
-delete_genre_button = tk.Button(tab4, text="Удалить жанр", command=delete_genre)
+delete_genre_button = tk.Button(tab5, text="Удалить жанр", command=delete_genre)
 delete_genre_button.pack()
 
 # Подключение к базе данных
 conn = create_connection("books.db")
+
 # Создание таблиц
 execute_query(conn, create_table_zanrid)
 execute_query(conn, create_table_autorid)
