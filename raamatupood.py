@@ -3,16 +3,16 @@ from tkinter import ttk
 from sqlite3 import connect, Error
 
 # Подключение к базе данных
-def create_connection(path: str):
+def create_connection(db_path: str):
     conn = None
     try:
-        conn = connect(path)
+        conn = connect(db_path)
         print("Connected to database")
         return conn
     except Error as e:
         print(e)
 
-# Функция для выполнения запроса к базе данных
+# Выполняет запрос к базе данных
 def execute_query(connection, query: str, params=None):
     try:
         cursor = connection.cursor()
@@ -60,40 +60,76 @@ CREATE TABLE IF NOT EXISTS raamatud(
     raamat_nimi TEXT NOT NULL,
     autorid INTEGER NOT NULL,
     zanrid INTEGER NOT NULL,
-    FOREIGN KEY (autor_id) REFERENCES autorid(autor_id),
-    FOREIGN KEY (zanr_id) REFERENCES zanrid(zanr_id)
-    insert_book_query = "INSERT INTO raamatud(raamat_nimi, autorid, zanrid) VALUES (?, ?, ?)"
-    execute_query(conn, insert_book_query, (book_name, author_id, genre_id))
+    FOREIGN KEY (autorid) REFERENCES autorid(autor_id),
+    FOREIGN KEY (zanrid) REFERENCES zanrid(zanr_id)
 )
 """
+# Подключение к базе данных
+conn = create_connection("books.db")
+# Создаем новую временную таблицу raamatud с необходимыми изменениями
+create_temp_table_raamatud = """
+CREATE TABLE IF NOT EXISTS raamatud_temp(
+    raamat_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    raamat_nimi TEXT NOT NULL,
+    autorid INTEGER NOT NULL,
+    zanrid INTEGER NOT NULL,
+    FOREIGN KEY (autorid) REFERENCES autorid(autor_id),
+    FOREIGN KEY (zanrid) REFERENCES zanrid(zanr_id)
+)
+"""
+execute_query(conn, create_temp_table_raamatud)
+
+# Переносим данные из старой таблицы raamatud в новую таблицу raamatud_temp
+transfer_data_query = """
+INSERT INTO raamatud_temp (raamat_id, raamat_nimi, autorid, zanrid)
+SELECT raamat_id, raamat_nimi, autorid, zanrid FROM raamatud
+"""
+execute_query(conn, transfer_data_query)
+
+# Удаляем старую таблицу raamatud
+drop_old_table_raamatud = """
+DROP TABLE IF EXISTS raamatud
+"""
+execute_query(conn, drop_old_table_raamatud)
+
+# Переименовываем новую таблицу raamatud_temp в raamatud
+rename_temp_table_raamatud = """
+ALTER TABLE raamatud_temp RENAME TO raamatud
+"""
+execute_query(conn, rename_temp_table_raamatud)
 
 
 # Определение SQL-запроса для выбора всех уникальных жанров
-select_from_zanr = """
+select_distinct_genres = """
 SELECT DISTINCT zanri_nimi FROM zanrid
 """
+
 def get_autor_years(connection, autor_id):
     query = "SELECT sunnikuupaev FROM autorid WHERE autor_id = ?"
     result = execute_read_query(connection, query, (autor_id,))
     if result:
         return result[0][0]
     else:
-        print(f"Birth date not found for author ID: {autor_id}")
+        print(f"Birth date not found for autor ID: {autor_id}")
         return None
 
 # Функция для отображения результатов
 def display_results(results):
     text.delete(1.0, tk.END)
-    for result in results:
-        book_id = result[0]
-        book_name = result[1]
-        autor_id = result[2]
-        autor_name = result[3]
-        autor_years = get_autor_years(conn, autor_id)
-        if autor_years:
-            text.insert(tk.END, f"{book_id}: {book_name} by {autor_name} ({autor_years})\n")
-        else:
-            text.insert(tk.END, f"{book_id}: {book_name} by {autor_name}\n")
+    if results is not None:  # Добавляем проверку на None
+        for result in results:
+            book_id = result[0]
+            book_name = result[1]
+            autor_id = result[2]
+            autor_name = result[3]
+            autor_years = get_autor_years(conn, autor_id)
+            if autor_years:
+                text.insert(tk.END, f"{book_id}: {book_name} by {autor_name} ({autor_years})\n")
+            else:
+                text.insert(tk.END, f"{book_id}: {book_name} by {autor_name}\n")
+    else:
+        text.insert(tk.END, "Нет результатов для отображения\n")
+
 
 # Функция для обработки выбора жанра
 def genre_selected(event=None):
@@ -102,7 +138,7 @@ def genre_selected(event=None):
         query = """
         SELECT raamatud.raamat_id, raamatud.raamat_nimi, autorid.autor_id, autorid.autor_nimi 
         FROM raamatud 
-        JOIN autorid ON raamatud.autor_id = autorid.autor_id
+        JOIN autorid ON raamatud.autorid = autorid.autor_id
         """
         results = execute_read_query(conn, query)
         display_results(results)
@@ -110,22 +146,20 @@ def genre_selected(event=None):
         query = """
         SELECT raamatud.raamat_id, raamatud.raamat_nimi, autorid.autor_id, autorid.autor_nimi
         FROM raamatud
-        INNER JOIN autorid ON raamatud.autor_id = autorid.autor_id
-        INNER JOIN zanrid ON raamatud.zanr_id = zanrid.zanr_id
+        INNER JOIN autorid ON raamatud.autorid = autorid.autor_id
+        INNER JOIN zanrid ON raamatud.zanrid = zanrid.zanr_id
         WHERE zanrid.zanri_nimi = ?
         """
         results = execute_read_query(conn, query, (selected_genre,))
         display_results(results)
 
-def get_id_from_name(connection, table_name, column_name, value):
-    query = f"SELECT {table_name}_id FROM {table_name} WHERE {column_name} = ?"
-    result = execute_read_query(connection, query, (value,))
-    if result:
-        return result[0][0]
-    else:
-        print(f"{value} не найдено в таблице {table_name}")
-        return None
-
+def get_id_from_name(conn, id_column, name_column, table_name, name):
+    cursor = conn.cursor()
+    query = f"SELECT {id_column} FROM {table_name} WHERE {name_column} = ?"
+    cursor.execute(query, (name,))
+    result = cursor.fetchone()
+    cursor.close()
+    return result[0] if result else None
 
 def add_genre_to_database(genre_name):
     if genre_name:
@@ -146,27 +180,41 @@ def add_book(conn):
     genre_name = genre_name_entry.get()
 
     if not book_name or not autor_name or not genre_name:
-        print("Пожалуйста, заполните все поля перед добавлением книги.")
+        print("Please fill in all fields before adding a book.")
         return
 
-    # Проверяем существование автора в базе данных
-    autor_id = get_id_from_name(conn, "autorid", "autor_nimi", autor_name)
+
+    # Check if autor exists in the database
+    autor_id = get_id_from_name(conn, "autor_id", "autor_nimi", "autorid", autor_name)
     if autor_id is None:
-        print(f"Author '{autor_name}' не найден в базе данных. Добавьте автора перед добавлением книги.")
-        # Здесь можно добавить код для добавления нового автора в базу данных, если это нужно
-        return
+        print(f"Autor '{autor_name}' not found in the database. Adding new autor.")
+        try:
+            insert_autor_query = "INSERT INTO autorid (autor_nimi, sunnikuupaev) VALUES (?, ?)"
+            sunnikuupaev = "1970-01-01"  # Here you can add a field for entering the autor's date of birth
+            execute_query(conn, insert_autor_query, (autor_name, sunnikuupaev))
+            autor_id = get_id_from_name(conn, "autor_id", "autor_nimi", "autorid", autor_name)
+            print(f"Autor '{autor_name}' was successfully added with id {autor_id}.")
+        except Exception as e:
+            conn.rollback()
+            print(f"Error adding autor: {e}")
 
-    # Проверяем существование жанра в базе данных
-    genre_id = get_id_from_name(conn, "zanrid", "zanri_nimi", genre_name)
+    # Check if genre exists in the database
+    genre_id = get_id_from_name(conn, "zanr_id", "zanri_nimi", "zanrid", genre_name)
     if genre_id is None:
-        print(f"Genre '{genre_name}' не найден в базе данных. Добавьте жанр перед добавлением книги.")
-        return
+        print(f"Genre '{genre_name}' not found in the database. Adding new genre.")
+        try:
+            insert_genre_query = "INSERT INTO zanrid (zanri_nimi) VALUES (?)"
+            execute_query(conn, insert_genre_query, (genre_name,))
+            genre_id = get_id_from_name(conn, "zanr_id", "zanri_nimi", "zanrid", genre_name)
+            print(f"Genre '{genre_name}' was successfully added with id {genre_id}.")
+        except Exception as e:
+            conn.rollback()
+            print(f"Error adding genre: {e}")
 
     # Добавляем книгу в базу данных
-    insert_book_query = "INSERT INTO raamatud(raamat_nimi, autorid, zanrid) VALUES (?, ?, ?)"
+    insert_book_query = "INSERT INTO raamatud (raamat_nimi, autorid, zanrid) VALUES (?, ?, ?)"
     execute_query(conn, insert_book_query, (book_name, autor_id, genre_id))
     print("Книга успешно добавлена")
-
 
 def add_genre(connection):
     new_genre = new_genre_entry.get()
@@ -178,6 +226,7 @@ def delete_book():
     delete_book_query = "DELETE FROM raamatud WHERE raamat_id = ?"
     execute_query(conn, delete_book_query, (book_id,))
     print("Book deleted successfully")
+
 def delete_genre():
     genre_name = delete_genre_combobox.get()
     if genre_name != "All Genres":
@@ -189,14 +238,13 @@ def delete_genre():
     else:
         print("Cannot delete 'All Genres'")
 
-
 # Создание главного окна приложения
 root = tk.Tk()
 root.title("Database Query Results")
 
 # Создание вкладок
 tab_control = ttk.Notebook(root)
-tab1  = ttk.Frame(tab_control)
+tab1 = ttk.Frame(tab_control)
 tab2 = ttk.Frame(tab_control)
 tab3 = ttk.Frame(tab_control)
 tab4 = ttk.Frame(tab_control)  # Новая вкладка для добавления жанра
@@ -209,7 +257,7 @@ tab_control.add(tab5, text="Удалить жанр")  # Добавляем вк
 tab_control.pack(expand=1, fill="both")
 
 # Вкладка "Просмотр книг"
-genres = ["All Genres"] + [genre[0] for genre in execute_read_query(create_connection("books.db"), "SELECT zanri_nimi FROM zanrid")]
+genres = ["All Genres"] + [genre[0] for genre in execute_read_query(create_connection("books.db"), select_distinct_genres)]
 genre_combobox = ttk.Combobox(tab1, values=genres)
 genre_combobox.current(0)
 genre_combobox.bind("<<ComboboxSelected>>", genre_selected)
@@ -266,10 +314,6 @@ conn = create_connection("books.db")
 execute_query(conn, create_table_zanrid)
 execute_query(conn, create_table_autorid)
 execute_query(conn, create_table_raamatud)
-
-# Вызов функций добавления книги и жанра с передачей параметра conn
-add_book(conn)
-add_genre(conn)
 
 # Запуск главного цикла обработки событий
 root.mainloop()
